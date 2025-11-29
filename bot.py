@@ -1,60 +1,34 @@
+# bot.py
 import os
-import requests
-from bs4 import BeautifulSoup
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
 TOKEN = "8245533941:AAGZR2MPSn38ehCBlvO6VUmWDizmIbIKYAk"
+PORT = int(os.environ.get("PORT", 8443))
+WEBHOOK_URL = f"https://uptv-bot-1.onrender.com/{TOKEN}"
 
-# -----------------------------
-# فرمان شروع
-# -----------------------------
+# ------------------------------
+# Handlers
+# ------------------------------
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "سلام! ربات آماده است ✅\n"
-        "برای دیدن 20 فیلم اول، دستور /movies را بزنید."
-    )
+    await update.message.reply_text("سلام! ربات شما آماده است 🚀")
 
-# -----------------------------
-# فرمان نمایش فیلم‌ها
-# -----------------------------
-async def movies(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    url = "https://www.uptvs.com/"  # صفحه اصلی فیلم‌ها
-    try:
-        r = requests.get(url)
-        r.raise_for_status()
-        soup = BeautifulSoup(r.text, "html.parser")
-        
-        films = soup.select("a.top-choices-item")[:20]  # 20 فیلم اول
-        msg = ""
-        for film in films:
-            title = film.get("title", "بدون عنوان")
-            link = film.get("href", "#")
-            msg += f"🎬 {title}\n🔗 {link}\n\n"
-        
-        await update.message.reply_text(msg or "هیچ فیلمی پیدا نشد.")
-    except Exception as e:
-        await update.message.reply_text(f"خطا در دریافت فیلم‌ها:\n{e}")
+async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text("دستورات موجود:\n/start\n/help")
 
-# -----------------------------
-# برنامه اصلی
-# -----------------------------
+# ------------------------------
+# Main
+# ------------------------------
 if __name__ == "__main__":
     app = ApplicationBuilder().token(TOKEN).build()
-    
-    # اضافه کردن Handlerها
+
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(CommandHandler("movies", movies))
+    app.add_handler(CommandHandler("help", help_command))
 
-    # پورت و URL برای Render
-    PORT = int(os.environ.get("PORT", 5000))
-    URL = f"https://your-render-service.onrender.com/{TOKEN}"  # <- اینو عوض کن
-
-    print(f"🚀 ربات با Webhook روی {URL} در حال اجراست")
-
-    # اجرای Webhook
+    # Start webhook
     app.run_webhook(
         listen="0.0.0.0",
         port=PORT,
-        webhook_url=URL
+        url_path=TOKEN,
+        webhook_url=WEBHOOK_URL
     )

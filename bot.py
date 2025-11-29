@@ -1,98 +1,60 @@
+import os
 import requests
 from bs4 import BeautifulSoup
-import json
-import os
 from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-# =========================
-# TOKEN از Environment یا مستقیم
-# =========================
-TOKEN = os.environ.get("TOKEN") or "توکن_ربات_تلگرام_را_اینجا_بگذار"
+TOKEN = "8245533941:AAGZR2MPSn38ehCBlvO6VUmWDizmIbIKYAk"
 
-# =========================
-# دانلود HTML
-# =========================
-def fetch_html(url):
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0)"
-    }
+# -----------------------------
+# فرمان شروع
+# -----------------------------
+async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        "سلام! ربات آماده است ✅\n"
+        "برای دیدن 20 فیلم اول، دستور /movies را بزنید."
+    )
+
+# -----------------------------
+# فرمان نمایش فیلم‌ها
+# -----------------------------
+async def movies(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    url = "https://www.uptvs.com/"  # صفحه اصلی فیلم‌ها
     try:
-        resp = requests.get(url, headers=headers, timeout=10)
-        resp.raise_for_status()
-        return resp.text
+        r = requests.get(url)
+        r.raise_for_status()
+        soup = BeautifulSoup(r.text, "html.parser")
+        
+        films = soup.select("a.top-choices-item")[:20]  # 20 فیلم اول
+        msg = ""
+        for film in films:
+            title = film.get("title", "بدون عنوان")
+            link = film.get("href", "#")
+            msg += f"🎬 {title}\n🔗 {link}\n\n"
+        
+        await update.message.reply_text(msg or "هیچ فیلمی پیدا نشد.")
     except Exception as e:
-        print("خطا در دریافت صفحه:", e)
-        return None
+        await update.message.reply_text(f"خطا در دریافت فیلم‌ها:\n{e}")
 
-# =========================
-# پردازش فیلم‌ها
-# =========================
-def parse_movies(html):
-    soup = BeautifulSoup(html, "html.parser")
-    items = soup.select("a.top-choices-item")
-    results = []
-
-    for it in items:
-        title = it.get_text(strip=True)
-        link = it.get("href")
-        img_tag = it.find("img")
-        image = img_tag.get("src") if img_tag else None
-
-        results.append({
-            "title": title,
-            "link": link,
-            "image": image
-        })
-
-    return results
-
-# =========================
-# ذخیره JSON
-# =========================
-def save_json(data, filename="movies.json"):
-    with open(filename, "w", encoding="utf-8") as f:
-        json.dump(data, f, ensure_ascii=False, indent=2)
-    print(f"ذخیره شد: {filename}")
-
-# =========================
-# فرمان تلگرام: /movies
-# =========================
-async def movies_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text("⏳ در حال دریافت فیلم‌ها...")
-
-    url = "https://uptvs.com/category/moviesz"
-    html = fetch_html(url)
-
-    if not html:
-        await update.message.reply_text("❌ خطا در دریافت صفحه")
-        return
-
-    movies = parse_movies(html)
-    save_json(movies)
-
-    if not movies:
-        await update.message.reply_text("هیچ فیلمی پیدا نشد.")
-        return
-
-    for m in movies[:20]:   # فقط ۲۰ فیلم اول
-        text = f"🎬 *{m['title']}*\n🔗 {m['link']}"
-        if m["image"]:
-            await update.message.reply_photo(photo=m["image"], caption=text, parse_mode="Markdown")
-        else:
-            await update.message.reply_text(text, parse_mode="Markdown")
-
-# =========================
-# شروع ربات
-# =========================
-def main():
-    app = ApplicationBuilder().token(TOKEN).build()
-    app.add_handler(CommandHandler("movies", movies_command))
-    print("ربات اجرا شد...")
-    app.run_polling()
-
-# =========================
-# اجرای برنامه
-# =========================
+# -----------------------------
+# برنامه اصلی
+# -----------------------------
 if __name__ == "__main__":
-    main()
+    app = ApplicationBuilder().token(TOKEN).build()
+    
+    # اضافه کردن Handlerها
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(CommandHandler("movies", movies))
+
+    # پورت و URL برای Render
+    PORT = int(os.environ.get("PORT", 5000))
+    URL = f"https://your-render-service.onrender.com/{TOKEN}"  # <- اینو عوض کن
+
+    print(f"🚀 ربات با Webhook روی {URL} در حال اجراست")
+
+    # اجرای Webhook
+    app.run_webhook(
+        listen="0.0.0.0",
+        port=PORT,
+        webhook_url=URL
+    )

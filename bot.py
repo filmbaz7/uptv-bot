@@ -1,14 +1,18 @@
 import requests
 from bs4 import BeautifulSoup
 import json
-from telegram import Update, InputMediaPhoto
+import os
+from telegram import Update
 from telegram.ext import ApplicationBuilder, CommandHandler, ContextTypes
 
-TOKEN = "8245533941:AAGZR2MPSn38ehCBlvO6VUmWDizmIbIKYAk"
+# =========================
+# TOKEN از Environment یا مستقیم
+# =========================
+TOKEN = os.environ.get("TOKEN") or "توکن_ربات_تلگرام_را_اینجا_بگذار"
 
-# ---------------------------
+# =========================
 # دانلود HTML
-# ---------------------------
+# =========================
 def fetch_html(url):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0)"
@@ -21,9 +25,9 @@ def fetch_html(url):
         print("خطا در دریافت صفحه:", e)
         return None
 
-# ---------------------------
+# =========================
 # پردازش فیلم‌ها
-# ---------------------------
+# =========================
 def parse_movies(html):
     soup = BeautifulSoup(html, "html.parser")
     items = soup.select("a.top-choices-item")
@@ -43,18 +47,17 @@ def parse_movies(html):
 
     return results
 
-
-# ---------------------------
+# =========================
 # ذخیره JSON
-# ---------------------------
+# =========================
 def save_json(data, filename="movies.json"):
     with open(filename, "w", encoding="utf-8") as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+    print(f"ذخیره شد: {filename}")
 
-
-# ---------------------------
+# =========================
 # فرمان تلگرام: /movies
-# ---------------------------
+# =========================
 async def movies_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("⏳ در حال دریافت فیلم‌ها...")
 
@@ -79,18 +82,17 @@ async def movies_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         else:
             await update.message.reply_text(text, parse_mode="Markdown")
 
-
-# ---------------------------
+# =========================
 # شروع ربات
-# ---------------------------
+# =========================
 def main():
     app = ApplicationBuilder().token(TOKEN).build()
-
     app.add_handler(CommandHandler("movies", movies_command))
-
     print("ربات اجرا شد...")
     app.run_polling()
 
-
+# =========================
+# اجرای برنامه
+# =========================
 if __name__ == "__main__":
     main()

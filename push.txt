@@ -1,0 +1,6 @@
+git init
+git add .
+git commit -m Initial bot
+git branch -M main
+git remote add origin httpsgithub.comUSERNAMEuptv-bot.git
+git push -u origin main
